@@ -1,6 +1,5 @@
 import 'dart:ui' show FontFeature;
 
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

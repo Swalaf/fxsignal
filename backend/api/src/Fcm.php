@@ -18,13 +18,7 @@ final class Fcm
     {
         if (!self::enabled()) return false;
         $c = config('fcm');
-        try {
-            $token = self::accessToken($c['service_account_file']);
-        } catch (Throwable $e) {
-            // A Firebase sign-in failure must never stop the signal run (prices, tracking, emails).
-            error_log("FCM auth failed for $topic: " . $e->getMessage());
-            return false;
-        }
+        $token = self::accessToken($c['service_account_file']);
         $payload = [
             'message' => [
                 'topic' => $topic,

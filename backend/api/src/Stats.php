@@ -74,20 +74,18 @@ final class Stats
 
     public static function show(): void
     {
-        $u = Auth::user();
-        Strategies::setScope(MarketRank::effectiveStrategy($u['strategy'] ?? null));
+        Auth::user();
         $days = (int) ($_GET['days'] ?? 30);
-        [$mkSql, $params, $scope] = markets_scope($u);
-        $where = "status = 'closed' AND published = 1" . Strategies::scopeSql() . $mkSql;
+        $params = [];
+        $where = "status = 'closed'";
         if ($days > 0) {
             $where .= ' AND closed_at >= ?';
             $params[] = now(time() - $days * 86400);
         }
         $closed = Db::all("SELECT pair, pips, closed_at FROM signals WHERE $where", $params);
-        $running = (int) Db::one("SELECT COUNT(*) AS n FROM signals WHERE status = 'running' AND published = 1" . Strategies::scopeSql() . $mkSql, markets_scope($u)[1])['n'];
+        $running = (int) Db::one("SELECT COUNT(*) AS n FROM signals WHERE status = 'running'")['n'];
         $stats = self::compute($closed, $running);
         $stats['days'] = $days;
-        $stats['markets'] = $scope;
         Http::send($stats);
     }
 }

@@ -258,7 +258,8 @@ class SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12, top: 4),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: AppText.title)),
+          Text(title, style: AppText.title),
+          const Spacer(),
           if (action != null)
             GestureDetector(
               onTap: onAction,

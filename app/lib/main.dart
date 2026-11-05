@@ -40,7 +40,6 @@ Future<void> main() async {
   final signals = SignalsStore(api);
   final stats = StatsStore(api);
   final market = MarketStore(api);
-  final money = MoneyStore(api);
 
   void onUnauthorized() {
     if (session.status == SessionStatus.loggedIn) session.logout();
@@ -49,7 +48,6 @@ Future<void> main() async {
   signals.onUnauthorized = onUnauthorized;
   stats.onUnauthorized = onUnauthorized;
   market.onUnauthorized = onUnauthorized;
-  money.onUnauthorized = onUnauthorized;
 
   void openSignal(int id) => navigatorKey.currentState
       ?.push(MaterialPageRoute(builder: (_) => SignalDetailScreen(signalId: id)));
@@ -88,7 +86,6 @@ Future<void> main() async {
     if (session.status != SessionStatus.loggedIn) {
       signals.clear();
       stats.clear();
-      money.clear();
     } else {
       final pushPending = push.takePendingSignal();
       final localPending = background.takePendingSignal();
@@ -112,7 +109,6 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: signals),
       ChangeNotifierProvider.value(value: stats),
       ChangeNotifierProvider.value(value: market),
-      ChangeNotifierProvider.value(value: money),
     ],
     child: const FxSignalsApp(),
   ));

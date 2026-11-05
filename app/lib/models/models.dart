@@ -61,11 +61,8 @@ class NotificationPrefs {
   final bool results;
   final bool reports;
 
-  /// Markets for alerts and the Signals tab. null = all pairs (only before the server answers).
+  /// null = all pairs (applies to push and email alerts)
   final List<String>? pairs;
-
-  /// true when the user picked [pairs] themselves; false when they follow the best recent markets.
-  final bool pairsChosen;
   final EmailPrefs email;
 
   const NotificationPrefs(
@@ -73,7 +70,6 @@ class NotificationPrefs {
       this.results = true,
       this.reports = true,
       this.pairs,
-      this.pairsChosen = false,
       this.email = const EmailPrefs()});
 
   factory NotificationPrefs.fromJson(Map<String, dynamic> j) => NotificationPrefs(
@@ -81,8 +77,6 @@ class NotificationPrefs {
         results: j['results'] as bool? ?? true,
         reports: j['reports'] as bool? ?? true,
         pairs: (j['pairs'] as List?)?.cast<String>(),
-        // Older servers do not send pairs_chosen; then any list counts as chosen (previous behaviour).
-        pairsChosen: j['pairs_chosen'] as bool? ?? (j['pairs'] != null),
         email: EmailPrefs.fromJson((j['email'] as Map?)?.cast<String, dynamic>() ?? {}),
       );
 
@@ -90,8 +84,7 @@ class NotificationPrefs {
         'signals': signals,
         'results': results,
         'reports': reports,
-        // Send a list only if the user picked one, so other settings never freeze the best markets.
-        'pairs': pairsChosen ? pairs : null,
+        'pairs': pairs,
         'email': email.toJson(),
       };
 
@@ -108,44 +101,8 @@ class NotificationPrefs {
         signals: signals ?? this.signals,
         results: results ?? this.results,
         reports: reports ?? this.reports,
-        // allPairs: go back to following the best recent markets (the server fills in the list).
         pairs: allPairs ? null : (pairs ?? this.pairs),
-        pairsChosen: allPairs ? false : (pairs != null ? true : pairsChosen),
         email: email ?? this.email,
-      );
-}
-
-/// Strategy, account size and risk the money figures are based on.
-class UserPrefs {
-  final String strategy;
-  final bool strategyChosen;
-  final double accountSize;
-  final double riskPct;
-  const UserPrefs(
-      {this.strategy = 'classic',
-      this.strategyChosen = false,
-      this.accountSize = 10000,
-      this.riskPct = 1});
-
-  factory UserPrefs.fromJson(Map<String, dynamic> j) => UserPrefs(
-        strategy: j['strategy'] as String? ?? 'classic',
-        strategyChosen: j['strategy_chosen'] as bool? ?? false,
-        accountSize: _dn(j['account_size']) ?? 10000,
-        riskPct: _dn(j['risk_pct']) ?? 1,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'strategy': strategy,
-        'strategy_chosen': strategyChosen,
-        'account_size': accountSize,
-        'risk_pct': riskPct,
-      };
-
-  UserPrefs copyWith({String? strategy, bool? strategyChosen, double? accountSize, double? riskPct}) => UserPrefs(
-        strategy: strategy ?? this.strategy,
-        strategyChosen: strategyChosen ?? this.strategyChosen,
-        accountSize: accountSize ?? this.accountSize,
-        riskPct: riskPct ?? this.riskPct,
       );
 }
 
@@ -157,7 +114,6 @@ class AppUser {
   final bool emailVerified;
   final NotificationPrefs notifications;
   final List<String> watchlist;
-  final UserPrefs prefs;
 
   const AppUser({
     required this.id,
@@ -167,7 +123,6 @@ class AppUser {
     this.emailVerified = false,
     required this.notifications,
     required this.watchlist,
-    this.prefs = const UserPrefs(),
   });
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
@@ -179,7 +134,6 @@ class AppUser {
         notifications: NotificationPrefs.fromJson(
             (j['notifications'] as Map?)?.cast<String, dynamic>() ?? {}),
         watchlist: (j['watchlist'] as List?)?.cast<String>() ?? const [],
-        prefs: UserPrefs.fromJson((j['preferences'] as Map?)?.cast<String, dynamic>() ?? {}),
       );
 
   Map<String, dynamic> toJson() => {
@@ -190,15 +144,13 @@ class AppUser {
         'email_verified': emailVerified,
         'notifications': notifications.toJson(),
         'watchlist': watchlist,
-        'preferences': prefs.toJson(),
       };
 
   AppUser copyWith(
           {String? name,
           bool? emailVerified,
           NotificationPrefs? notifications,
-          List<String>? watchlist,
-          UserPrefs? prefs}) =>
+          List<String>? watchlist}) =>
       AppUser(
         id: id,
         name: name ?? this.name,
@@ -207,7 +159,6 @@ class AppUser {
         emailVerified: emailVerified ?? this.emailVerified,
         notifications: notifications ?? this.notifications,
         watchlist: watchlist ?? this.watchlist,
-        prefs: prefs ?? this.prefs,
       );
 }
 
@@ -224,7 +175,6 @@ class TradeSignal {
   final bool isRunning;
   final SignalResult? result;
   final DateTime? tp1HitAt;
-  final DateTime? lockHitAt;
   final DateTime openedAt;
   final DateTime? expiresAt;
   final DateTime? closedAt;
@@ -233,10 +183,6 @@ class TradeSignal {
   final double? currentPrice;
   final double? livePips;
   final List<Candle> candles;
-  final String strategy;
-  final String strategyName;
-  final double pipValuePerLot;
-  final double costPips;
 
   const TradeSignal({
     required this.id,
@@ -260,11 +206,6 @@ class TradeSignal {
     required this.currentPrice,
     required this.livePips,
     this.candles = const [],
-    this.lockHitAt,
-    this.strategy = 'classic',
-    this.strategyName = 'Classic',
-    this.pipValuePerLot = 10,
-    this.costPips = 1.5,
   });
 
   static SignalResult? _result(String? r) => switch (r) {
@@ -300,11 +241,6 @@ class TradeSignal {
                 ?.map((c) => Candle.fromList(c as List))
                 .toList() ??
             const [],
-        lockHitAt: _t(j['lock_hit_at']),
-        strategy: j['strategy'] as String? ?? 'classic',
-        strategyName: j['strategy_name'] as String? ?? 'Classic',
-        pipValuePerLot: _dn(j['pip_value_per_lot']) ?? 10,
-        costPips: _dn(j['cost_pips']) ?? 1.5,
       );
 
   String get direction => isBuy ? 'BUY' : 'SELL';
@@ -318,7 +254,6 @@ class TradeSignal {
       };
 
   bool get tp1Hit => tp1HitAt != null;
-  bool get lockHit => lockHitAt != null;
   bool get isWin => (pips ?? 0) > 0;
 
   double _pipsTo(double price) =>
@@ -345,30 +280,7 @@ class TradeSignal {
 class SignalPage {
   final List<TradeSignal> items;
   final bool hasMore;
-  final MarketsScope? markets;
-  const SignalPage(this.items, this.hasMore, [this.markets]);
-}
-
-/// Which markets a signal list covers: the viewer's own ('mine') or every market ('all').
-/// [source] says where "mine" came from: 'chosen' by the user, 'best' recent markets, or the 'default' (gold).
-class MarketsScope {
-  final String mode;
-  final List<String> markets;
-  final String source;
-  final List<String> bestMarkets;
-  const MarketsScope({this.mode = 'mine', this.markets = const [], this.source = 'best', this.bestMarkets = const []});
-
-  bool get all => mode == 'all';
-
-  factory MarketsScope.fromJson(Map<String, dynamic> j) {
-    List<String> l(dynamic v) => ((v as List?) ?? const []).map((e) => '$e').toList();
-    return MarketsScope(
-      mode: j['mode'] as String? ?? 'mine',
-      markets: l(j['markets']),
-      source: j['source'] as String? ?? 'best',
-      bestMarkets: l(j['best_markets']),
-    );
-  }
+  const SignalPage(this.items, this.hasMore);
 }
 
 class PairStat {
